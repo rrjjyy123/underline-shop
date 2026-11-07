@@ -22,11 +22,26 @@ const AUTH_MSG = {
 
 // 문을 열고 들어온 뒤: 구글로 로그인 → (처음 한 번) 닉네임 정하기
 export default function Enter() {
-  const { user, member, setMember, signInGoogle, signOutMember } = useApp();
+  const { user, isDemo, member, setMember, signInGoogle, startDemo, signOutMember } = useApp();
   const [name, setName] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
-  const needNickname = !!user && member === null;
+  const [demoBusy, setDemoBusy] = useState(false);
+  const needNickname = !!user && !isDemo && member === null;
+
+  const demo = async () => {
+    setErr('');
+    setDemoBusy(true);
+    try {
+      await startDemo();
+    } catch (e) {
+      console.error(e);
+      setErr(e.code === 'auth/operation-not-allowed' || e.code === 'auth/admin-restricted-operation'
+        ? '데모 입장이 아직 켜져 있지 않아요. (Firebase 익명 로그인 사용 설정 필요)'
+        : `데모로 들어가지 못했어요. (${e.code || e.message})`);
+      setDemoBusy(false);
+    }
+  };
 
   const login = async () => {
     setErr('');
@@ -64,10 +79,15 @@ export default function Enter() {
         {!needNickname ? (
           <>
             <p className="enter-hi">어서 오세요. 구글 계정으로 들어오면<br />장바구니와 서랍이 어느 기기에서나 그대로예요.</p>
-            <button className="google-btn" onClick={login} disabled={busy}>
+            <button className="google-btn" onClick={login} disabled={busy || demoBusy}>
               <GoogleMark />
               <span>{busy ? '로그인 창을 여는 중…' : 'Google로 시작하기'}</span>
             </button>
+            <div className="or-line" aria-hidden><span>또는</span></div>
+            <button className="demo-btn" onClick={demo} disabled={busy || demoBusy}>
+              {demoBusy ? '데모 상점을 여는 중…' : '로그인 없이 데모로 둘러보기'}
+            </button>
+            <p className="field-help mt8">데모는 '데모손님' 닉네임으로 들어가요. 기록은 이 브라우저에만 남고, 나중에 구글 계정에 연결하면 그대로 옮겨져요.</p>
             {err && <p className="field-err mt8" role="alert">{err}</p>}
             <p className="field-help mt12">로그인하면 구글 계정의 이름·사진은 다른 사람에게 보이지 않아요. 상점에서는 직접 정한 닉네임만 보여요.</p>
           </>

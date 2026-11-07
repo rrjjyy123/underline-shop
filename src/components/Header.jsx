@@ -13,7 +13,21 @@ const NAV = [
 ];
 
 export default function Header() {
-  const { member, cart, signOutMember } = useApp();
+  const { member, cart, signOutMember, isDemo, signInGoogle, toast } = useApp();
+
+  const connectGoogle = async () => {
+    setMenu(false);
+    try {
+      await signInGoogle();
+      toast('구글 계정에 연결했어요. 데모 기록이 그대로 남아요.');
+    } catch (e) {
+      if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') toast(`연결하지 못했어요 (${e.code || e.message})`);
+    }
+  };
+  const leave = () => {
+    if (isDemo && !window.confirm('데모에서 나가면 이 데모 계정의 장바구니·서랍 기록은 다시 볼 수 없어요. 나갈까요?')) return;
+    signOutMember();
+  };
   const nav = useNavigate();
   const loc = useLocation();
   const [q, setQ] = useState('');
@@ -59,6 +73,7 @@ export default function Header() {
             <IconBag />
             {cart.length > 0 && <span className="badge">{cart.length}</span>}
           </Link>
+          {isDemo && <button className="demo-badge" onClick={() => setMenu(true)} title="데모로 둘러보는 중">데모</button>}
           <div className="gh-profile" ref={menuRef}>
             <button className="avatar" onClick={() => setMenu((m) => !m)} aria-expanded={menu} aria-label="내 메뉴">
               {member.nickname.slice(0, 1)}
@@ -66,10 +81,12 @@ export default function Header() {
             {menu && (
               <div className="menu profile-menu" role="menu">
                 <p className="pm-name"><b>{member.nickname}</b><span>#{member.tag}</span></p>
+                {isDemo && <p className="pm-demo">데모로 둘러보는 중이에요. 구글 계정에 연결하면 기록이 그대로 저장돼요.</p>}
+                {isDemo && <button role="menuitem" onClick={connectGoogle}>구글 계정에 연결하기</button>}
                 <Link role="menuitem" to="/board">내 무드보드 꾸미기</Link>
                 <Link role="menuitem" to="/drawer">내 서랍</Link>
                 <Link role="menuitem" to="/cart">장바구니 · 무드보드</Link>
-                <button role="menuitem" onClick={signOutMember}>로그아웃</button>
+                <button role="menuitem" onClick={leave}>{isDemo ? '데모 나가기' : '로그아웃'}</button>
               </div>
             )}
           </div>

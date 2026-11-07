@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { GoogleAuthProvider, linkWithPopup, onAuthStateChanged, signInWithCredential, signInWithPopup, signOut } from 'firebase/auth';
+import { GoogleAuthProvider, linkWithPopup, onAuthStateChanged, signInAnonymously, signInWithCredential, signInWithPopup, signOut } from 'firebase/auth';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { auth, db } from './lib/firebase';
 import {
@@ -15,10 +15,11 @@ export const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function AppProvider({ children }) {
-  // authUser: Firebase가 알고 있는 사용자(이전 버전의 익명 사용자 포함), user: 구글로 로그인한 사용자
+  // user: 구글로 로그인한 사용자 또는 '데모로 둘러보기'로 들어온 익명 사용자
   const [authUser, setAuthUser] = useState(undefined);
   const [, setAuthTick] = useState(0); // 익명→구글 연결은 같은 객체가 바뀌므로 다시 그리게 한다
-  const user = authUser && !authUser.isAnonymous ? authUser : null;
+  const user = authUser || null;
+  const isDemo = !!authUser?.isAnonymous;
   const authReady = authUser !== undefined;
   const [authError] = useState(null);
   const [member, setMemberState] = useState(undefined);
@@ -63,6 +64,13 @@ export function AppProvider({ children }) {
       }
     }
     await signInWithPopup(auth, provider);
+  }, []);
+
+  // 구글 로그인 없이 데모로 둘러보기: 익명 계정 + 자동 닉네임
+  const startDemo = useCallback(async () => {
+    const cred = auth.currentUser?.isAnonymous ? { user: auth.currentUser } : await signInAnonymously(auth);
+    const tag = String(Math.floor(1000 + Math.random() * 9000));
+    await saveMember(cred.user.uid, '데모손님', tag);
   }, []);
 
   useEffect(() => {
@@ -166,7 +174,7 @@ export function AppProvider({ children }) {
   }, [user, cartIds, cart.length, toast, flyToCart]);
 
   const value = {
-    user, authReady, authError, member, setMember, signOutMember, signInGoogle, feed, feedError, books: booksView, allBooks: books, byId,
+    user, isDemo, authReady, authError, member, setMember, signOutMember, signInGoogle, startDemo, feed, feedError, books: booksView, allBooks: books, byId,
     cart, cartIds, cartItems, drawer, collectedIds, moodboard,
     toggleCart, toast, toasts, dismissToast,
   };
