@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useApp, prefersReducedMotion } from '../store';
 import { checkNickname } from '../lib/guard';
 
-const WORDS = ['옷을', '음악을', '향수를', '문장을'];
+const WORDS = ['음악을', '향수를', '옷을', '패션을'];
 
 export default function Enter() {
   const { setMember, user } = useApp();
