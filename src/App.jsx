@@ -18,6 +18,8 @@ import Drawer from './pages/Drawer';
 import BoardEdit from './pages/BoardEdit';
 import BoardView from './pages/BoardView';
 import Boards from './pages/Boards';
+import Mood from './pages/Mood';
+import New from './pages/New';
 
 const SS_KEY = 'underline-shop:entered';
 const seenLanding = () => {
@@ -62,6 +64,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/top" element={<Top />} />
+          <Route path="/new" element={<New />} />
+          <Route path="/mood" element={<Mood />} />
           <Route path="/search" element={<Search />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/c/:id" element={<Collection />} />

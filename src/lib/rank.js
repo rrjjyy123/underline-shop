@@ -32,7 +32,7 @@ function hash(s) {
 }
 
 // 오늘의 추천 배너: 날짜마다 바뀌는 6개 (같은 책이 겹치지 않게)
-export function heroPicks(feed, n = 6) {
+export function heroPicks(feed, n = 9) {
   if (!feed?.length) return [];
   const day = todayKey();
   const sorted = [...feed].sort((a, b) => hash(a.id + day) - hash(b.id + day));
@@ -40,7 +40,7 @@ export function heroPicks(feed, n = 6) {
   const out = [];
   for (const u of sorted) {
     if (books.has(u.bookId)) continue;
-    if (u.sentence.length > 110) continue;
+    if (u.sentence.length > 90) continue;
     books.add(u.bookId);
     out.push(u);
     if (out.length === n) break;

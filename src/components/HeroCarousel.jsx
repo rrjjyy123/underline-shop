@@ -1,81 +1,95 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp, prefersReducedMotion } from '../store';
-import { KEYWORDS } from '../data/keywords';
 import { Paper } from './Paper';
-import { IconBag, IconBagFilled, IconBack } from './Icons';
+import { IconBag, IconBagFilled } from './Icons';
 
-const INTERVAL = 6000;
+const INTERVAL = 5000;
+const PER = 3;
 
-export default function HeroCarousel({ items }) {
+function BannerCard({ u, no }) {
   const { cartIds, toggleCart } = useApp();
-  const [i, setI] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const touch = useRef(null);
-  const paperRef = useRef(null);
-  const n = items.length;
+  const ref = useRef(null);
+  const inCart = cartIds.has(u.id);
+  return (
+    <article className="bn-card" ref={ref}>
+      <div className="bn-no">NO.{String(no).padStart(2, '0')}</div>
+      <Link to={`/u/${u.id}`} className="bn-paper" aria-label={`「${u.bookTitle}」 문장 자세히 보기`}>
+        <Paper u={u} variant="hero" />
+      </Link>
+      <div className="bn-foot">
+        <div className="bn-kw">{(u.keywords || []).map((k) => <span key={k}>#{k}</span>)}</div>
+        <button className={`cartbtn ${inCart ? 'on' : ''}`} onClick={() => toggleCart(u, ref.current)} aria-pressed={inCart}>
+          {inCart ? <IconBagFilled /> : <IconBag />}
+          <span>{inCart ? '담음' : '장바구니 담기'}</span>
+        </button>
+      </div>
+    </article>
+  );
+}
 
-  const go = useCallback((d) => setI((x) => (x + d + n) % n), [n]);
+// 오늘의 추천 문장: 데스크톱은 한 번에 3장씩 5초마다, 모바일은 옆으로 넘겨 보기
+export default function HeroCarousel({ items }) {
+  const [page, setPage] = useState(0);
+  const pause = useRef(0);
+  const pages = [];
+  for (let i = 0; i < items.length; i += PER) pages.push(items.slice(i, i + PER));
+  const n = pages.length;
+
+  const go = useCallback((d) => { setPage((p) => (p + d + n) % n); pause.current = Date.now() + 9000; }, [n]);
 
   useEffect(() => {
-    if (paused || n < 2 || prefersReducedMotion()) return;
-    const t = setTimeout(() => go(1), INTERVAL);
-    return () => clearTimeout(t);
-  }, [i, paused, n, go]);
+    if (n < 2 || prefersReducedMotion()) return;
+    const t = setInterval(() => {
+      if (document.hidden || pause.current > Date.now()) return;
+      setPage((p) => (p + 1) % n);
+    }, INTERVAL);
+    return () => clearInterval(t);
+  }, [n]);
 
-  if (!n) return <div className="hero hero-skeleton" aria-hidden />;
-  const u = items[i];
-  const inCart = cartIds.has(u.id);
-  const tone = KEYWORDS[u.keywords?.[0]]?.color || '#c9a27e';
+  if (!items.length) return <div className="banner banner-skeleton" aria-hidden />;
 
   return (
     <section
-      className="hero"
+      className="banner"
       aria-roledescription="carousel"
       aria-label="오늘의 추천 문장"
-      style={{ '--tone': tone }}
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
-      onTouchStart={(e) => { touch.current = e.touches[0].clientX; setPaused(true); }}
-      onTouchEnd={(e) => {
-        const dx = e.changedTouches[0].clientX - (touch.current ?? 0);
-        if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1);
-        setPaused(false);
-      }}
+      onMouseEnter={() => { pause.current = Date.now() + 60000; }}
+      onMouseLeave={() => { pause.current = 0; }}
+      onFocus={() => { pause.current = Date.now() + 60000; }}
     >
-      <div className="hero-glow" aria-hidden />
-      <div className="hero-inner">
-        <div className="hero-paper" key={u.id} ref={paperRef}>
-          <Link to={`/u/${u.id}`} aria-label="문장 자세히 보기">
-            <Paper u={u} variant="hero" />
-          </Link>
+      <div className="bn-head">
+        <div>
+          <p className="bn-kick">TODAY'S PICK</p>
+          <h2>오늘의 추천 문장</h2>
         </div>
-        <div className="hero-meta" key={`m-${u.id}`}>
-          <p className="hero-kicker">TODAY'S PICK <b>{String(i + 1).padStart(2, '0')}</b><span> / {String(n).padStart(2, '0')}</span></p>
-          <h2 className="hero-book">「{u.bookTitle}」</h2>
-          <p className="hero-author">{u.author}{u.isClassic ? ' · 고전' : ''}</p>
-          {u.reason && <p className="hero-reason">“{u.reason}”</p>}
-          <p className="hero-tags">{(u.keywords || []).map((k) => `#${k}`).join('  ')}</p>
-          <div className="hero-actions">
-            <button className={`btn-primary hero-cart ${inCart ? 'in' : ''}`} onClick={() => toggleCart(u, paperRef.current)} aria-pressed={inCart}>
-              {inCart ? <IconBagFilled /> : <IconBag />}
-              {inCart ? '담았어요' : '장바구니 담기'}
-            </button>
-            <Link to={`/u/${u.id}`} className="btn-ghost hero-more">자세히</Link>
-          </div>
-        </div>
+        <span className="bn-count"><b>{page + 1}</b> / {n}</span>
       </div>
 
-      <button className="hero-arrow prev" onClick={() => go(-1)} aria-label="이전 문장"><IconBack /></button>
-      <button className="hero-arrow next" onClick={() => go(1)} aria-label="다음 문장"><IconBack /></button>
-      <div className="hero-dots" role="tablist" aria-label="문장 선택">
-        {items.map((x, k) => (
-          <button key={x.id} role="tab" aria-selected={k === i} aria-label={`${k + 1}번째 문장`} onClick={() => setI(k)}>
-            {k === i && !paused && <span className="dot-fill" style={{ animationDuration: `${INTERVAL}ms` }} />}
-          </button>
+      {/* 데스크톱: 페이지 단위로 3장씩 */}
+      <div className="bn-track">
+        {pages.map((pg, i) => (
+          <div key={i} className={`bn-slide ${i === page ? 'on' : ''}`} aria-hidden={i !== page}>
+            {pg.map((u, k) => <BannerCard key={u.id} u={u} no={i * PER + k + 1} />)}
+          </div>
         ))}
+      </div>
+
+      {/* 모바일: 한 줄로 옆으로 넘기기 */}
+      <div className="bn-scroll">
+        {items.map((u, k) => <BannerCard key={u.id} u={u} no={k + 1} />)}
+      </div>
+
+      <div className="bn-ctrl">
+        <div className="bn-dots" role="tablist" aria-label="추천 묶음">
+          {pages.map((_, i) => (
+            <button key={i} role="tab" aria-selected={i === page} aria-label={`${i + 1}번째 묶음`} className={i === page ? 'on' : ''} onClick={() => { setPage(i); pause.current = Date.now() + 9000; }} />
+          ))}
+        </div>
+        <div className="bn-arrows">
+          <button className="bn-arrow" onClick={() => go(-1)} aria-label="이전 추천">‹</button>
+          <button className="bn-arrow" onClick={() => go(1)} aria-label="다음 추천">›</button>
+        </div>
       </div>
     </section>
   );
