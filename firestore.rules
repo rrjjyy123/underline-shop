@@ -60,8 +60,15 @@ service cloud.firestore {
       // 담기: 처음 담는 사람만 +1 (내 서랍에 수집 기록이 새로 생길 때)
       allow update: if signedIn() && (
         (
-          changed().hasOnly(['cartCount'])
+          changed().hasOnly(['cartCount', 'dayKey', 'dayCount'])
           && request.resource.data.cartCount == resource.data.cartCount + 1
+          && request.resource.data.dayKey is string
+          && (
+            (request.resource.data.dayKey == resource.data.get('dayKey', '')
+              && request.resource.data.dayCount == resource.data.get('dayCount', 0) + 1)
+            || (request.resource.data.dayKey != resource.data.get('dayKey', '')
+              && request.resource.data.dayCount == 1)
+          )
           && !exists(/databases/$(database)/documents/members/$(me())/drawer/$(id))
           && existsAfter(/databases/$(database)/documents/members/$(me())/drawer/$(id))
         ) || (

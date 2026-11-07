@@ -1,16 +1,11 @@
 import { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useApp } from '../store';
-import { HOME_TAGS } from '../data/keywords';
-import { todaysPick } from '../lib/taste';
-import { Paper } from '../components/Paper';
-import { ChipBar, EmptyState, Masonry, Segmented } from '../components/UI';
-import { IconClose, IconSearch } from '../components/Icons';
-
-const SORTS = [
-  { value: 'new', label: '최신순' },
-  { value: 'hot', label: '많이 담긴 순' },
-];
+import { HOME_TAGS, KEYWORDS } from '../data/keywords';
+import { buildTop, heroPicks } from '../lib/rank';
+import HeroCarousel from '../components/HeroCarousel';
+import { RankCard, TopNotice } from '../components/TopList';
+import { EmptyState, Masonry } from '../components/UI';
 
 export function sortFeed(list, sort) {
   const arr = [...list];
@@ -18,81 +13,64 @@ export function sortFeed(list, sort) {
   return arr;
 }
 
-export default function Home() {
-  const { feed, books, member } = useApp();
-  const loc = useLocation();
-  const [tag, setTag] = useState(loc.state?.tag || null);
-  const [sort, setSort] = useState('new');
-  const [q, setQ] = useState('');
-  const [searchOpen, setSearchOpen] = useState(false);
+const FEED_TABS = [
+  { id: 'new', label: '최신 문장' },
+  { id: 'hot', label: '인기 문장' },
+  { id: 'mood', label: '분위기별' },
+  { id: 'people', label: '친구들의 밑줄' },
+];
 
-  const pick = useMemo(() => (feed ? todaysPick(feed) : null), [feed]);
-  const hot = useMemo(() => (feed ? sortFeed(feed, 'hot').filter((u) => (u.cartCount || 0) > 0).slice(0, 8) : []), [feed]);
-  const shelf = useMemo(() => [...books].sort((a, b) => (b.underlineCount || 0) - (a.underlineCount || 0)).slice(0, 12), [books]);
+export default function Home() {
+  const { feed, books } = useApp();
+  const loc = useLocation();
+  const [tab, setTab] = useState(loc.state?.tag ? 'mood' : 'new');
+  const [mood, setMood] = useState(loc.state?.tag || HOME_TAGS[0]);
+
+  const picks = useMemo(() => heroPicks(feed), [feed]);
+  const top = useMemo(() => buildTop(feed, 10), [feed]);
+  const shelf = useMemo(() => [...books].sort((a, b) => b.underlineCount - a.underlineCount).slice(0, 14), [books]);
 
   const list = useMemo(() => {
     if (!feed) return null;
-    let l = feed;
-    if (tag) l = l.filter((u) => u.keywords?.includes(tag));
-    const s = q.trim();
-    if (s) l = l.filter((u) => `${u.sentence} ${u.bookTitle} ${u.author} ${u.nickname}`.includes(s));
-    return sortFeed(l, sort);
-  }, [feed, tag, sort, q]);
-
-  const filtering = !!tag || !!q.trim();
+    if (tab === 'hot') return sortFeed(feed, 'hot');
+    if (tab === 'mood') return feed.filter((u) => u.keywords?.includes(mood));
+    if (tab === 'people') return feed.filter((u) => !u.isSeed);
+    return feed;
+  }, [feed, tab, mood]);
 
   return (
     <div className="page home">
-      <header className="home-head">
-        <div className="brand">
-          <h1 className="logo">밑줄<span>상점</span></h1>
-          <p className="hello">{member.nickname}님, 오늘은 어떤 문장을 담을까요?</p>
-        </div>
-        <button className="icon-btn" aria-label={searchOpen ? '검색 닫기' : '검색 열기'} onClick={() => { setSearchOpen((o) => !o); setQ(''); }}>
-          {searchOpen ? <IconClose /> : <IconSearch />}
-        </button>
-      </header>
+      <HeroCarousel items={picks} />
 
-      {searchOpen && (
-        <div className="search-row">
-          <IconSearch />
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="문장, 책 제목, 저자로 찾기" aria-label="검색어" />
-        </div>
-      )}
+      <section className="corner-row" aria-label="분위기 코너">
+        {HOME_TAGS.map((t) => (
+          <button key={t} className="corner" style={{ '--c': KEYWORDS[t].color }} onClick={() => { setTab('mood'); setMood(t); document.getElementById('feed')?.scrollIntoView({ behavior: 'smooth' }); }}>
+            <span className="corner-dot">#{t}</span>
+          </button>
+        ))}
+      </section>
 
-      <ChipBar tags={HOME_TAGS} active={tag} onToggle={(t) => setTag((cur) => (cur === t ? null : t))} />
-
-      {!filtering && pick && (
-        <section className="today">
-          <div className="section-head">
-            <h2>오늘의 추천 문장</h2>
-            <span className="date">{new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}</span>
+      <section className="top-section">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">BEST SELLER</p>
+            <h2>오늘의 문장 TOP 100</h2>
           </div>
-          <Link to={`/u/${pick.id}`} className="today-card">
-            <Paper u={pick} variant="hero" />
-          </Link>
-        </section>
-      )}
+          <Link to="/top" className="more">전체 보기</Link>
+        </div>
+        <TopNotice todayCount={top.todayCount} />
+        <div className="top-rail">
+          {(top.items || []).map((it) => <RankCard key={it.u.id} item={it} />)}
+        </div>
+      </section>
 
-      {!filtering && hot.length > 0 && (
-        <section>
-          <div className="section-head"><h2>지금 많이 담기는 밑줄</h2></div>
-          <div className="hscroll">
-            {hot.map((u, i) => (
-              <Link key={u.id} to={`/u/${u.id}`} className="rank-card">
-                <span className="rank">{i + 1}</span>
-                <Paper u={u} variant="mini" />
-                <span className="rank-meta">담김 {u.cartCount}</span>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {!filtering && shelf.length > 0 && (
+      {shelf.length > 0 && (
         <section>
           <div className="section-head">
-            <h2>책 진열대</h2>
+            <div>
+              <p className="eyebrow">BOOKSHELF</p>
+              <h2>책 진열대</h2>
+            </div>
             <Link to="/explore" className="more">전체 보기</Link>
           </div>
           <div className="shelf">
@@ -106,18 +84,32 @@ export default function Home() {
         </section>
       )}
 
-      <section>
-        <div className="section-head feed-head">
-          <h2>{tag ? `#${tag}` : q.trim() ? `"${q.trim()}" 검색 결과` : '모든 밑줄'}</h2>
-          <Segmented value={sort} options={SORTS} onChange={setSort} label="정렬" />
+      <section id="feed" className="feed-section">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">FOR YOU</p>
+            <h2>추천 문장</h2>
+          </div>
         </div>
+        <div className="feed-tabs" role="tablist" aria-label="추천 문장 보기">
+          {FEED_TABS.map((t) => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} className={tab === t.id ? 'on' : ''} onClick={() => setTab(t.id)}>{t.label}</button>
+          ))}
+        </div>
+        {tab === 'mood' && (
+          <div className="chipbar" role="group" aria-label="분위기 고르기">
+            {HOME_TAGS.map((t) => (
+              <button key={t} className={`chip ${mood === t ? 'on' : ''}`} aria-pressed={mood === t} onClick={() => setMood(t)}>#{t}</button>
+            ))}
+          </div>
+        )}
         <Masonry
           items={list}
           empty={
             <EmptyState
-              title="맞는 문장이 없어요"
-              desc="필터를 풀고 다시 둘러볼까요?"
-              action={<button className="btn-ghost" onClick={() => { setTag(null); setQ(''); }}>필터 풀기</button>}
+              title={tab === 'people' ? '아직 친구들이 올린 밑줄이 없어요' : '맞는 문장이 없어요'}
+              desc={tab === 'people' ? '첫 번째 밑줄의 주인공이 되어 볼까요?' : '다른 분위기를 골라 보세요.'}
+              action={tab === 'people' ? <Link to="/post" className="btn-primary">밑줄 올리기</Link> : null}
             />
           }
         />

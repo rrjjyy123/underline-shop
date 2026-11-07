@@ -1,9 +1,13 @@
 /* ───────── tokens ───────── */
 :root {
   color-scheme: light;
-  --bg: #f5f0e6;
-  --bg-2: #efe8da;
-  --paper: #fbf8f1;
+  --bg: #e8ddc8;
+  --bg-2: #ddd0b7;
+  --paper: #fffbf3;
+  --wood: #3a2619;
+  --wood-2: #4e3324;
+  --night: #172033;
+  --honey: #e3a83c;
   --ink: #1d1b18;
   --ink-2: #4a4540;
   --muted: #7a736a;

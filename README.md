@@ -6,7 +6,9 @@
 교사 대상 바이브코딩 해커톤(주제: 텍스트 힙) 출품작입니다. 기획서는 `../plan/밑줄상점_PRD_v0.3.md`를 따릅니다.
 
 ## 기능
-- 닉네임만으로 입장 (Firebase 익명 인증, 기록은 같은 기기·브라우저에 유지)
+- three.js 상점 외관 첫 화면 (불 켜짐 → 간판 → 밑줄 → 슬로건 → 문 열고 입장)
+- 구글 간편 로그인 + 닉네임 (실명 대신 닉네임만 공개)
+- 오늘의 추천 배너 캐러셀, 오늘의 문장 TOP 100 (오늘 담긴 수 기준, 부족하면 누적/데모로 구분 표시)
 - HOME: 오늘의 추천 문장, 많이 담기는 밑줄, 책 진열대, 해시태그·검색·정렬(최신순/많이 담긴 순) 메이슨리 피드
 - EXPLORE: 분위기 섞어 보기, 큐레이션 5종, 장바구니와 비슷한 문장, 고전 컬렉션, 초성 색인 책 목록
 - 책 상세: 한 권의 밑줄 피드, "나와 비슷한 취향" 필터, 밑줄 올리기 버튼
@@ -31,7 +33,7 @@ npm run dev
 ```bash
 npm run deploy
 ```
-(빌드 후 Firebase Hosting과 Firestore 규칙을 함께 배포합니다. 프로젝트: `underline-shop-rrjjyy`)
+(빌드 후 Firebase Hosting(https://underline-shop.web.app)과 Firestore 규칙을 함께 배포합니다. 프로젝트: `underline-shop-rrjjyy`)
 
 ## 스택
 Vite + React, Firebase(Firestore, 익명 인증, Hosting), html-to-image, 자체 호스팅 웹폰트(Noto Serif KR, Gowun Batang, Nanum Pen Script, IBM Plex Sans KR)

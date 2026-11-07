@@ -21,6 +21,11 @@ export function waitForUser() {
   });
 }
 
+// 한국 시간 기준 오늘 (예: 2026-11-07)
+export function todayKey(d = new Date()) {
+  return new Date(d.getTime() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+}
+
 export function bookIdOf(title, author) {
   const s = `${title.trim()}|${author.trim()}`.toLowerCase();
   let h = 2166136261;
@@ -97,10 +102,18 @@ export async function addToCart(uid, underlineId) {
   const uRef = doc(db, 'underlines', underlineId);
   await runTransaction(db, async (tx) => {
     const drawer = await tx.get(drawerRef);
+    const u = await tx.get(uRef);
     tx.set(cartRef, { underlineId, createdAt: serverTimestamp() });
-    if (!drawer.exists()) {
+    if (!drawer.exists() && u.exists()) {
+      const today = todayKey();
+      const d = u.data();
+      const sameDay = d.dayKey === today;
       tx.set(drawerRef, { underlineId, type: 'collected', createdAt: serverTimestamp() });
-      tx.update(uRef, { cartCount: increment(1) });
+      tx.update(uRef, {
+        cartCount: (d.cartCount || 0) + 1,
+        dayKey: today,
+        dayCount: sameDay ? (d.dayCount || 0) + 1 : 1,
+      });
     }
   });
 }

@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { GoogleAuthProvider, linkWithPopup, onAuthStateChanged, signInWithCredential, signInWithPopup, signOut } from 'firebase/auth';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { auth, db } from './lib/firebase';
 import {
-  waitForUser, ensureSeeds, saveMember, subscribeFeed, subscribeBooks, subscribeSub,
+  ensureSeeds, saveMember, subscribeFeed, subscribeBooks, subscribeSub,
   subscribeMoodboard, addToCart, removeFromCart, restoreToCart,
 } from './lib/db';
 import { CART_MAX } from './lib/taste';
@@ -8,22 +11,17 @@ import { CART_MAX } from './lib/taste';
 const Ctx = createContext(null);
 export const useApp = () => useContext(Ctx);
 
-const LS_KEY = 'underline-shop:member';
-const readMember = () => {
-  try {
-    return JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-  } catch {
-    return null;
-  }
-};
-
 export const prefersReducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 export function AppProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [authError, setAuthError] = useState(null);
-  const [member, setMemberState] = useState(readMember);
+  // authUser: Firebase가 알고 있는 사용자(이전 버전의 익명 사용자 포함), user: 구글로 로그인한 사용자
+  const [authUser, setAuthUser] = useState(undefined);
+  const [, setAuthTick] = useState(0); // 익명→구글 연결은 같은 객체가 바뀌므로 다시 그리게 한다
+  const user = authUser && !authUser.isAnonymous ? authUser : null;
+  const authReady = authUser !== undefined;
+  const [authError] = useState(null);
+  const [member, setMemberState] = useState(undefined);
   const [feed, setFeed] = useState(null);
   const [feedError, setFeedError] = useState(null);
   const [books, setBooks] = useState([]);
@@ -33,12 +31,42 @@ export function AppProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const toastId = useRef(0);
 
+  useEffect(() => onAuthStateChanged(auth, (u) => setAuthUser(u || null)), []);
+
+  // 내 회원 정보 (닉네임은 Firestore에 저장: 기기를 바꿔도 유지)
   useEffect(() => {
-    waitForUser().then(setUser).catch((e) => setAuthError(e));
+    if (!user) { setMemberState(user === null && authReady ? null : undefined); return; }
+    setMemberState(undefined);
+    return onSnapshot(doc(db, 'members', user.uid), (d) => {
+      const data = d.data();
+      setMemberState(data?.nickname ? { nickname: data.nickname, tag: data.tag } : null);
+    }, () => setMemberState(null));
+  }, [user?.uid, authReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const signInGoogle = useCallback(async () => {
+    const provider = new GoogleAuthProvider();
+    provider.setCustomParameters({ prompt: 'select_account' });
+    // 예전 익명 사용자라면 구글 계정에 연결해서 장바구니·서랍 기록을 그대로 가져간다
+    if (auth.currentUser?.isAnonymous) {
+      try {
+        const res = await linkWithPopup(auth.currentUser, provider);
+        await res.user.reload();
+        setAuthUser(auth.currentUser);
+        setAuthTick((n) => n + 1);
+        return;
+      } catch (e) {
+        if (e.code === 'auth/credential-already-in-use') {
+          const cred = GoogleAuthProvider.credentialFromError(e);
+          if (cred) { await signInWithCredential(auth, cred); return; }
+        }
+        if (e.code !== 'auth/provider-already-linked') throw e;
+      }
+    }
+    await signInWithPopup(auth, provider);
   }, []);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setFeed(null); setCart([]); setDrawer([]); setMoodboard(undefined); return; }
     ensureSeeds().catch(() => {});
     const offs = [
       subscribeFeed(setFeed, (e) => setFeedError(e)),
@@ -51,15 +79,17 @@ export function AppProvider({ children }) {
       subscribeMoodboard(user.uid, setMoodboard),
     ];
     return () => offs.forEach((off) => off());
-  }, [user]);
+  }, [user?.uid]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const setMember = useCallback(async (nickname) => {
-    const tag = String(Math.floor(1000 + Math.random() * 9000));
-    const m = { nickname: nickname.trim(), tag };
-    localStorage.setItem(LS_KEY, JSON.stringify(m));
-    setMemberState(m);
-    if (user) saveMember(user.uid, m.nickname, tag).catch(() => {});
-  }, [user]);
+    if (!user) return;
+    const tag = member?.tag || String(Math.floor(1000 + Math.random() * 9000));
+    await saveMember(user.uid, nickname.trim(), tag);
+  }, [user, member?.tag]);
+
+  const signOutMember = useCallback(async () => {
+    await signOut(auth);
+  }, []);
 
   const toast = useCallback((text, action) => {
     const id = ++toastId.current;
@@ -86,7 +116,9 @@ export function AppProvider({ children }) {
   const collectedIds = useMemo(() => new Set(drawer.map((d) => d.id)), [drawer]);
 
   const flyToCart = useCallback((fromEl) => {
-    const target = document.getElementById('nav-cart');
+    const target = ['hdr-cart', 'nav-cart']
+      .map((id) => document.getElementById(id))
+      .find((el) => el && el.getBoundingClientRect().width > 0 && getComputedStyle(el).display !== 'none');
     if (!fromEl || !target || prefersReducedMotion()) return;
     const a = fromEl.getBoundingClientRect();
     const b = target.getBoundingClientRect();
@@ -134,7 +166,7 @@ export function AppProvider({ children }) {
   }, [user, cartIds, cart.length, toast, flyToCart]);
 
   const value = {
-    user, authError, member, setMember, feed, feedError, books: booksView, allBooks: books, byId,
+    user, authReady, authError, member, setMember, signOutMember, signInGoogle, feed, feedError, books: booksView, allBooks: books, byId,
     cart, cartIds, cartItems, drawer, collectedIds, moodboard,
     toggleCart, toast, toasts, dismissToast,
   };

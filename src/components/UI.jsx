@@ -97,20 +97,20 @@ export function BottomNav() {
   return (
     <nav className="bottom-nav" aria-label="주요 메뉴">
       <div className="nav-inner">
-        {tab('/', 'HOME', IconHome, true)}
-        {tab('/explore', 'EXPLORE', IconCompass)}
+        {tab('/', '홈', IconHome, true)}
+        {tab('/explore', '둘러보기', IconCompass)}
         <NavLink to="/post" className="tab post-tab" aria-label="문장 올리기">
           <span className="post-fab"><IconPlus /></span>
-          <span>POST</span>
+          <span>올리기</span>
         </NavLink>
         <NavLink to="/cart" id="nav-cart" className={({ isActive }) => `tab ${isActive ? 'active' : ''}`}>
           <span className="bag-wrap">
             <IconBag />
             {cart.length > 0 && <span className="badge">{cart.length}</span>}
           </span>
-          <span>CART</span>
+          <span>장바구니</span>
         </NavLink>
-        {tab('/drawer', 'DRAWER', IconDrawer)}
+        {tab('/drawer', '서랍', IconDrawer)}
       </div>
     </nav>
   );

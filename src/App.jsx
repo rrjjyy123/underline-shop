@@ -1,9 +1,13 @@
 import { Route, Routes, useLocation } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useApp } from './store';
 import { BottomNav, Toasts } from './components/UI';
+import Header from './components/Header';
+import Landing from './pages/Landing';
 import Enter from './pages/Enter';
 import Home from './pages/Home';
+import Top from './pages/Top';
+import Search from './pages/Search';
 import Explore from './pages/Explore';
 import Collection from './pages/Collection';
 import Book from './pages/Book';
@@ -12,10 +16,24 @@ import Post from './pages/Post';
 import Cart from './pages/Cart';
 import Drawer from './pages/Drawer';
 
+const SS_KEY = 'underline-shop:entered';
+const seenLanding = () => {
+  try { return sessionStorage.getItem(SS_KEY) === '1'; } catch { return false; }
+};
+
 export default function App() {
-  const { member, authError, feedError } = useApp();
+  const { user, member, authReady, authError, feedError } = useApp();
   const loc = useLocation();
+  const [entered, setEntered] = useState(seenLanding);
+  const [arriving, setArriving] = useState(false);
   useEffect(() => { window.scrollTo(0, 0); }, [loc.pathname]);
+
+  const finishLanding = () => {
+    try { sessionStorage.setItem(SS_KEY, '1'); } catch { /* 저장 못 해도 진행 */ }
+    setArriving(true);
+    setEntered(true);
+    setTimeout(() => setArriving(false), 900);
+  };
 
   const err = authError || feedError;
   if (err) {
@@ -27,13 +45,21 @@ export default function App() {
       </div>
     );
   }
-  if (!member) return <Enter />;
+  if (!entered) return <Landing onEntered={finishLanding} />;
+  if (!authReady || (user && member === undefined)) {
+    return <div className="enter"><p className="loading-line">불을 켜는 중…</p></div>;
+  }
+  if (!user || !member) return <div className={arriving ? 'arrive' : ''}><Enter /></div>;
 
+  const hideBottom = loc.pathname.startsWith('/post') || loc.pathname.startsWith('/u/');
   return (
-    <>
+    <div className={arriving ? 'arrive' : ''}>
+      <Header />
       <main className="app">
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/top" element={<Top />} />
+          <Route path="/search" element={<Search />} />
           <Route path="/explore" element={<Explore />} />
           <Route path="/c/:id" element={<Collection />} />
           <Route path="/book/:id" element={<Book />} />
@@ -44,8 +70,8 @@ export default function App() {
           <Route path="*" element={<Home />} />
         </Routes>
       </main>
-      {!loc.pathname.startsWith('/post') && !loc.pathname.startsWith('/u/') && <BottomNav />}
+      {!hideBottom && <BottomNav />}
       <Toasts />
-    </>
+    </div>
   );
 }
