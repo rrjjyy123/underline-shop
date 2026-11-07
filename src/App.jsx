@@ -15,6 +15,9 @@ import Detail from './pages/Detail';
 import Post from './pages/Post';
 import Cart from './pages/Cart';
 import Drawer from './pages/Drawer';
+import BoardEdit from './pages/BoardEdit';
+import BoardView from './pages/BoardView';
+import Boards from './pages/Boards';
 
 const SS_KEY = 'underline-shop:entered';
 const seenLanding = () => {
@@ -51,7 +54,7 @@ export default function App() {
   }
   if (!user || !member) return <div className={arriving ? 'arrive' : ''}><Enter /></div>;
 
-  const hideBottom = loc.pathname.startsWith('/post') || loc.pathname.startsWith('/u/');
+  const hideBottom = loc.pathname.startsWith('/post') || loc.pathname.startsWith('/u/') || loc.pathname === '/board';
   return (
     <div className={arriving ? 'arrive' : ''}>
       <Header />
@@ -67,6 +70,9 @@ export default function App() {
           <Route path="/post" element={<Post />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/drawer" element={<Drawer />} />
+          <Route path="/board" element={<BoardEdit />} />
+          <Route path="/boards" element={<Boards />} />
+          <Route path="/b/:uid" element={<BoardView />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </main>

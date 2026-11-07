@@ -40,6 +40,11 @@ export default function Drawer() {
         <p className="muted">#{member.tag} · 올린 밑줄 {posts?.length ?? 0} · 내 밑줄이 담긴 횟수 {totalCollected}</p>
       </header>
 
+      <div className="drawer-board-links">
+        <Link to="/board" className="btn-primary">내 무드보드 꾸미기</Link>
+        {user && <Link to={`/b/${user.uid}`} className="btn-ghost">내 보드 페이지</Link>}
+      </div>
+
       <div className="ul-tabs" role="tablist" style={{ '--i': idx, '--n': TABS.length }}>
         {TABS.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => { setTab(t.id); setOpen(null); }}>{t.label}</button>

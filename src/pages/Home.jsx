@@ -6,6 +6,7 @@ import { buildTop, heroPicks } from '../lib/rank';
 import HeroCarousel from '../components/HeroCarousel';
 import { RankCard, TopNotice } from '../components/TopList';
 import { EmptyState, Masonry } from '../components/UI';
+import { BoardTile, useBoards } from './Boards';
 
 export function sortFeed(list, sort) {
   const arr = [...list];
@@ -26,6 +27,7 @@ export default function Home() {
   const [tab, setTab] = useState(loc.state?.tag ? 'mood' : 'new');
   const [mood, setMood] = useState(loc.state?.tag || HOME_TAGS[0]);
 
+  const boards = useBoards();
   const picks = useMemo(() => heroPicks(feed), [feed]);
   const top = useMemo(() => buildTop(feed, 10), [feed]);
   const shelf = useMemo(() => [...books].sort((a, b) => b.underlineCount - a.underlineCount).slice(0, 14), [books]);
@@ -61,6 +63,24 @@ export default function Home() {
         <TopNotice todayCount={top.todayCount} />
         <div className="top-rail">
           {(top.items || []).map((it) => <RankCard key={it.u.id} item={it} />)}
+        </div>
+      </section>
+
+      <section className="boards-home">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">MOODBOARD</p>
+            <h2>문장으로 나를 표현한 무드보드</h2>
+          </div>
+          <Link to="/boards" className="more">갤러리 보기</Link>
+        </div>
+        <div className="board-rail">
+          <Link to="/board" className="board-cta">
+            <span className="cta-plus" aria-hidden>＋</span>
+            <b>내 무드보드 꾸미기</b>
+            <span>담은 문장, 한 줄 소개, 색과 스티커로 나를 한 장에</span>
+          </Link>
+          {(boards || []).slice(0, 6).map((b) => <BoardTile key={b.id} b={b} />)}
         </div>
       </section>
 

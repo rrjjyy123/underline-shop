@@ -112,6 +112,7 @@ export default function Cart() {
           <div className="board-actions">
             <SaveImageButton targetRef={boardRef} filename={`밑줄상점-${member.nickname}.png`} />
             <button className="btn-ghost" onClick={keepLog}>셋로그에 남기기</button>
+            <Link to="/board" className="btn-ghost board-link">이 취향으로 내 무드보드 꾸미기 →</Link>
           </div>
         </section>
       )}

@@ -8,6 +8,7 @@ const NAV = [
   { to: '/', label: '홈', end: true },
   { to: '/top', label: 'TOP 100' },
   { to: '/explore', label: '둘러보기' },
+  { to: '/boards', label: '무드보드' },
   { to: '/drawer', label: '내 서랍' },
 ];
 
@@ -65,6 +66,7 @@ export default function Header() {
             {menu && (
               <div className="menu profile-menu" role="menu">
                 <p className="pm-name"><b>{member.nickname}</b><span>#{member.tag}</span></p>
+                <Link role="menuitem" to="/board">내 무드보드 꾸미기</Link>
                 <Link role="menuitem" to="/drawer">내 서랍</Link>
                 <Link role="menuitem" to="/cart">장바구니 · 무드보드</Link>
                 <button role="menuitem" onClick={signOutMember}>로그아웃</button>

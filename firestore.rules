@@ -93,6 +93,15 @@ service cloud.firestore {
       allow write: if signedIn() && me() == uid;
     }
 
+    // 나를 표현하는 무드보드: 공개한 보드는 모두가, 비공개는 본인만 본다
+    match /boards/{uid} {
+      allow read: if signedIn() && (me() == uid || resource.data.published == true);
+      allow write: if signedIn() && me() == uid
+        && request.resource.data.items is list
+        && request.resource.data.items.size() <= 50
+        && request.resource.data.memberId == uid;
+    }
+
     match /setlogs/{id} {
       allow read: if signedIn();
       allow create: if signedIn() && request.resource.data.memberId == me();
