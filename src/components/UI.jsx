@@ -14,30 +14,28 @@ export function SentenceCard({ u }) {
         <Paper u={u} />
       </Link>
       <div className="card-meta">
-        <span className="av" aria-hidden>{(u.isSeed ? '큐' : u.nickname || '?').slice(0, 1)}</span>
-        <span className="nick" title={u.nickname}>{u.isSeed ? '큐레이션' : (u.nickname || '').split('#')[0]}</span>
+        <span className="nick" title={u.nickname}>{u.isSeed ? '큐레이션' : u.nickname}</span>
+        <span className="count">담김 {u.cartCount || 0}</span>
         <button
           type="button"
-          className={`cartbtn ${inCart ? 'on' : ''}`}
+          className={`bag-btn ${inCart ? 'on' : ''}`}
           aria-pressed={inCart}
-          aria-label={`${inCart ? '장바구니에서 빼기' : '장바구니에 담기'} (담김 ${u.cartCount || 0})`}
+          aria-label={inCart ? '장바구니에서 빼기' : '장바구니에 담기'}
           onClick={() => toggleCart(u, ref.current)}
         >
           {inCart ? <IconBagFilled /> : <IconBag />}
-          <span>{inCart ? '담음' : '담기'}</span>
-          <em>{u.cartCount || 0}</em>
         </button>
       </div>
-      {u.reason && <p className="card-reason">“{u.reason}”</p>}
+      {u.keywords?.[0] && <p className="card-tag">#{u.keywords.join(' #')}</p>}
     </article>
   );
 }
 
-export function Masonry({ items, empty, dense = false }) {
+export function Masonry({ items, empty }) {
   if (!items) return <SkeletonGrid />;
   if (!items.length) return empty || null;
   return (
-    <div className={`masonry ${dense ? 'dense' : ''}`}>
+    <div className="masonry">
       {items.map((u) => <SentenceCard key={u.id} u={u} />)}
     </div>
   );

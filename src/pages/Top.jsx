@@ -17,7 +17,7 @@ export default function Top() {
       </header>
       <TopNotice todayCount={top.todayCount} />
       {!top.items ? <SkeletonGrid /> : (
-        <div className="ranks">
+        <div className="top-grid">
           {top.items.map((it) => <RankCard key={it.u.id} item={it} />)}
         </div>
       )}

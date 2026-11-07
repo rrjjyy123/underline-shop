@@ -108,7 +108,7 @@ export default function Cart() {
 
       {showBoard && (
         <section className="board-wrap">
-          <Moodboard ref={boardRef} mb={moodboard} items={[...cartItems].reverse()} nickname={`${member.nickname}`} dateText={today} />
+          <Moodboard ref={boardRef} mb={moodboard} nickname={`${member.nickname}`} dateText={today} />
           <div className="board-actions">
             <SaveImageButton targetRef={boardRef} filename={`밑줄상점-${member.nickname}.png`} />
             <button className="btn-ghost" onClick={keepLog}>셋로그에 남기기</button>

@@ -8,14 +8,17 @@ export function sizeClass(sentence = '') {
   return 'len-s';
 }
 
-// 로고·제목 아래에 쓰는 주황 물결 밑줄 (브랜드 마크)
+// 브랜드 밑줄 규칙: 모든 카드는 문장 끝에 같은 꿀색 손그림 밑줄 하나를 가진다.
+// '밑줄' 장식을 고르면 문장 전체에 같은 색 형광펜이 들어간다. (색·두께·모양은 바꾸지 않는다)
 export function BrandUnderline({ className = '' }) {
-  return <span className={`wave-ul ${className}`} aria-hidden />;
+  return (
+    <svg className={`brand-ul ${className}`} viewBox="0 0 120 12" preserveAspectRatio="none" aria-hidden>
+      <path d="M2 8.5 C 22 4.5, 44 10, 66 6.5 S 104 4, 118 6" />
+    </svg>
+  );
 }
 
-// 종이 위의 문장 한 장.
-// 브랜드 밑줄 규칙: 모든 문장 아래에는 같은 주황 손밑줄(물결)이 그어진다.
-// '밑줄' 장식을 고르면 같은 위치에 형광펜이 더해진다. 종이·글꼴·장식은 자유.
+// 종이 위의 문장 한 장. 피드·배너·무드보드 어디서나 같은 모양으로 쓴다.
 export function Paper({ u, variant = 'feed', highlight = false, className = '' }) {
   const font = fontById(u.font);
   const ink = inkById(u.ink);
@@ -29,10 +32,11 @@ export function Paper({ u, variant = 'feed', highlight = false, className = '' }
       {u.deco === 'tape' && <span className="tape" aria-hidden />}
       {u.deco === 'sticker' && <span className="sticker" aria-hidden>✦</span>}
       <p className={`sentence ${font.id === 'pen' ? 'is-pen' : ''}`}>
-        <span className={`ul ${marked ? 'hl' : ''} ${highlight ? 'anim' : ''}`}>{u.sentence}</span>
+        {marked ? <mark className={highlight ? 'hl' : 'ul'}>{u.sentence}</mark> : u.sentence}
       </p>
+      <BrandUnderline />
       <p className="source">
-        <b>「{u.bookTitle || u.title || '책 제목'}」</b>
+        <b>{u.bookTitle || u.title || '책 제목'}</b>
         <span>{u.author || '저자'}{u.page ? ` · p.${u.page}` : ''}</span>
       </p>
       {u.deco === 'label' && (u.keywords || []).length > 0 && (
