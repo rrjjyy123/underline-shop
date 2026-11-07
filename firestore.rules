@@ -1,0 +1,95 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function me() { return request.auth.uid; }
+    function changed() { return request.resource.data.diff(resource.data).affectedKeys(); }
+
+    match /meta/{docId} {
+      allow read: if signedIn();
+      allow create: if signedIn();
+    }
+
+    match /members/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && me() == uid;
+
+      match /cart/{itemId} {
+        allow read, write: if signedIn() && me() == uid;
+      }
+      match /drawer/{itemId} {
+        allow read, write: if signedIn() && me() == uid;
+      }
+    }
+
+    match /books/{bookId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 80
+        && request.resource.data.author is string
+        && request.resource.data.author.size() <= 40;
+      allow update: if signedIn()
+        && changed().hasOnly(['underlineCount'])
+        && request.resource.data.underlineCount == resource.data.underlineCount + 1;
+    }
+
+    match /underlines/{id} {
+      allow read: if signedIn();
+
+      allow create: if signedIn() && (
+        (
+          request.resource.data.authorId == me()
+          && request.resource.data.isSeed == false
+          && request.resource.data.sentence is string
+          && request.resource.data.sentence.size() > 0
+          && request.resource.data.sentence.size() <= 150
+          && request.resource.data.cartCount == 0
+          && request.resource.data.reportCount == 0
+          && request.resource.data.hidden == false
+        ) || (
+          id.matches('seed-[0-9]+')
+          && request.resource.data.isSeed == true
+          && request.resource.data.authorId == 'seed'
+          && request.resource.data.hidden == false
+        )
+      );
+
+      // 담기: 처음 담는 사람만 +1 (내 서랍에 수집 기록이 새로 생길 때)
+      allow update: if signedIn() && (
+        (
+          changed().hasOnly(['cartCount'])
+          && request.resource.data.cartCount == resource.data.cartCount + 1
+          && !exists(/databases/$(database)/documents/members/$(me())/drawer/$(id))
+          && existsAfter(/databases/$(database)/documents/members/$(me())/drawer/$(id))
+        ) || (
+          // 신고: 한 사람당 한 번, 3회 누적이면 숨김
+          changed().hasOnly(['reportCount', 'hidden'])
+          && request.resource.data.reportCount == resource.data.reportCount + 1
+          && request.resource.data.hidden == (request.resource.data.reportCount >= 3)
+          && !exists(/databases/$(database)/documents/underlines/$(id)/reports/$(me()))
+          && existsAfter(/databases/$(database)/documents/underlines/$(id)/reports/$(me()))
+        )
+      );
+
+      allow delete: if signedIn() && resource.data.authorId == me();
+
+      match /reports/{uid} {
+        allow create: if signedIn() && me() == uid;
+      }
+    }
+
+    match /moodboards/{uid} {
+      allow read: if signedIn();
+      allow write: if signedIn() && me() == uid;
+    }
+
+    match /setlogs/{id} {
+      allow read: if signedIn();
+      allow create: if signedIn() && request.resource.data.memberId == me();
+      allow delete: if signedIn() && resource.data.memberId == me();
+    }
+  }
+}
